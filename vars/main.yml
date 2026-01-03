@@ -1,0 +1,2 @@
+---
+download_url: https://download.strongswan.org/strongswan-{{ strongswan_version }}.tar.gz

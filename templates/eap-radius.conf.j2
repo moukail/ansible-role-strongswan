@@ -3,8 +3,8 @@ eap-radius {
     load = yes
     servers {
         primary {
-            address = radius.moukail.nl
-            secret = meknes
+            address = {{ eap-radius.server }}
+            secret = {{ eap-radius.secret }}
         }
     }
 }

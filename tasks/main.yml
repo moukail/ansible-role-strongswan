@@ -19,41 +19,50 @@
     update_cache: yes
     state: latest
 
-- name: Downloading strongswan {{ strongswan_ver }} sources
+
+
+- name: Create temporary build directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: build
+  register: tmp_dir
+
+- name: Downloading strongswan {{ strongswan_version }} sources
   ansible.builtin.get_url:
-    url: "{{ strongswan_tarball_url }}"
-    dest: "/tmp/strongswan-{{ strongswan_ver }}.tar.gz"
+    url: "{{ download_url }}"
+    dest: "{{ tmp_dir.path }}/strongswan-{{ strongswan_version }}.tar.gz"
   register: strongswan_source
 
 - name: Unpacking strongswan
-  #when: strongswan_source.changed
   ansible.builtin.unarchive:
-    copy: no
-    dest: /tmp
+    copy: false
+    dest: "{{ tmp_dir.path }}"
     src: "{{ strongswan_source.dest }}"
-  register: strongswan_source_unpack
+
+- name: Set build_dir
+  ansible.builtin.set_fact:
+    build_dir: "{{ tmp_dir.path }}/strongswan-{{ strongswan_version }}"
 
 - name: Configuring strongswan source with custom modules
-  #when: strongswan_source_unpack.changed
   ansible.builtin.command: './configure --prefix=/usr --sysconfdir=/etc --enable-openssl --enable-eap-identity --enable-eap-mschapv2 --enable-eap-radius --enable-eap-dynamic CFLAGS="-DDEBUG_LEVEL=1 -I/usr/include/openssl"'
   args:
-    chdir: "{{ strongswan_source_unpack.dest }}/strongswan-{{ strongswan_ver }}"
-  register: strongswan_configure
+    chdir: "{{ build_dir }}"
 
 - name: Installing strongswan
-  #when: strongswan_configure.changed
   ansible.builtin.shell: make -j$(nproc) && make install
   args:
-    chdir: "{{ strongswan_source_unpack.dest }}/strongswan-{{ strongswan_ver }}"
+    chdir: "{{ build_dir }}"
 
 - name: Remove strongswan dir in tmp
   ansible.builtin.file:
-    path: "{{ strongswan_source_unpack.dest }}/strongswan-{{ strongswan_ver }}"
+    path: "{{ tmp_dir.path }}"
     state: absent
 
+
+
 - name: Creating eap-radius.conf file
-  ansible.builtin.copy:
-    src: eap-radius.conf
+  ansible.builtin.template:
+    src: eap-radius.conf.j2
     dest: /etc/strongswan.d/charon/eap-radius.conf
 
 - name: Creating ipsec conf file
@@ -63,11 +72,11 @@
     mode: 0644
 
 - name: Creating ipsec secrets file
-  ansible.builtin.copy:
-    src: ipsec.secrets
+  ansible.builtin.template:
+    src: ipsec.secrets.j2
     dest: /etc/ipsec.secrets
 
-- name: Installing freeRadius init script (service)
+- name: Copy strongswan-starter.service
   ansible.builtin.copy:
     src: strongswan-starter.service
     dest: /usr/lib/systemd/system/strongswan-starter.service

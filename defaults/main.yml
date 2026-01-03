@@ -1,4 +1,16 @@
 ---
-strongswan_ver: 6.0.2
-strongswan_tarball_url: https://download.strongswan.org/strongswan-{{ strongswan_ver }}.tar.gz
+strongswan_version: 5.9.14 #6.0.4
 acme_email: moukafih@live.nl
+
+eap-radius:
+  server: radius.example.com
+  secret: MyRadiusSecret
+  auth_port: 1812
+  acct_port: 1813
+
+eap-mschapv2:
+  username: testuser
+  password: TestPassword123
+
+psk:
+  password: MySecretPSKPassword
