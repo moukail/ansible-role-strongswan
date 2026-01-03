@@ -2,7 +2,7 @@
 strongswan_version: 5.9.14 #6.0.4
 acme_email: moukafih@live.nl
 
-eap-radius:
+eap_radius:
   server: radius.example.com
   secret: MyRadiusSecret
   auth_port: 1812
