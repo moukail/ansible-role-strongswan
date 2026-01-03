@@ -8,7 +8,7 @@ eap_radius:
   auth_port: 1812
   acct_port: 1813
 
-eap-mschapv2:
+eap_mschapv2:
   username: testuser
   password: TestPassword123
 
