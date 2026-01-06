@@ -1,33 +1,5 @@
 ---
-- name: check if nginx service exists
-  stat:
-    path: /usr/lib/systemd/system/nginx.service
-  register: nginx_service
-
 - name: check if letsencrypt dir exists
-  stat:
-    path: /etc/letsencrypt/live/{{ inventory_hostname }}/
-  register: letsencrypt_dir
-
-- name: Stop Nginx
-  when: not letsencrypt_dir.stat.exists and nginx_service.stat.exists
-  systemd:
-    name: nginx.service
-    state: stopped
-
-- name: Create letsencrypt certificate
-  when: not letsencrypt_dir.stat.exists
-  shell: |
-    export PATH=$PATH:/usr/local/bin/
-    certbot certonly --standalone --non-interactive --key-type rsa --preferred-challenges http --agree-tos --no-eff-email --email {{ acme_email }} -d {{ inventory_hostname }}
-
-- name: Start Nginx
-  when: not letsencrypt_dir.stat.exists and nginx_service.stat.exists
-  systemd:
-    name: nginx.service
-    state: started
-
-- name: check if letsencrypt dir exists {{ inventory_hostname }}
   stat:
     path: /etc/letsencrypt/live/{{ inventory_hostname }}/
   register: letsencrypt_dir
@@ -52,4 +24,4 @@
   file:
     src: /etc/letsencrypt/live/{{ inventory_hostname }}/chain.pem
     dest: /etc/ipsec.d/cacerts/chain.pem
-    state: link
+    state: link 
