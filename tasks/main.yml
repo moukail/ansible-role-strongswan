@@ -1,83 +1,18 @@
 ---
-- name: Installing strongswan Dependencies
-  when: ansible_os_family == "RedHat"
-  ansible.builtin.dnf:
-    name: gmp-devel
-    update_cache: yes
-    state: latest
+- name: Get current version
+  ansible.builtin.shell: ipsec version | cut -f3 -d' ' | cut -f1 -d'/' | cut -f2 -d'U' | head -n1
+  register: current_version
+  changed_when: false
 
-- name: Installing strongswan Dependencies
-  when: ansible_os_family == "Debian"
-  ansible.builtin.apt:
-    name: libgmp-dev
-    update_cache: yes
-    state: latest
+- name: Check if ipsec is already installed
+  ansible.builtin.debug:
+    msg: "Current ipsec version is {{ current_version.stdout }}"
 
+- name: Compile strongswan from source code
+  ansible.builtin.include_tasks: install.yml
+  when: current_version.stdout != strongswan_version
 
-
-- name: Create temporary build directory
-  ansible.builtin.tempfile:
-    state: directory
-    suffix: build
-  register: tmp_dir
-
-- name: Downloading strongswan {{ strongswan_version }} sources
-  ansible.builtin.get_url:
-    url: "{{ download_url }}"
-    dest: "{{ tmp_dir.path }}/strongswan-{{ strongswan_version }}.tar.gz"
-  register: strongswan_source
-
-- name: Unpacking strongswan
-  ansible.builtin.unarchive:
-    copy: false
-    dest: "{{ tmp_dir.path }}"
-    src: "{{ strongswan_source.dest }}"
-
-- name: Set build_dir
-  ansible.builtin.set_fact:
-    build_dir: "{{ tmp_dir.path }}/strongswan-{{ strongswan_version }}"
-
-- name: Configuring strongswan source with custom modules
-  ansible.builtin.command: './configure --prefix=/usr --sysconfdir=/etc --enable-openssl --enable-eap-identity --enable-eap-mschapv2 --enable-eap-radius --enable-eap-dynamic CFLAGS="-DDEBUG_LEVEL=1 -I/usr/include/openssl"'
-  args:
-    chdir: "{{ build_dir }}"
-
-- name: Installing strongswan
-  ansible.builtin.shell: make -j$(nproc) && make install
-  args:
-    chdir: "{{ build_dir }}"
-
-- name: Remove strongswan dir in tmp
-  ansible.builtin.file:
-    path: "{{ tmp_dir.path }}"
-    state: absent
-
-
-
-- name: Creating eap-radius.conf file
-  ansible.builtin.template:
-    src: eap-radius.conf.j2
-    dest: /etc/strongswan.d/charon/eap-radius.conf
-
-- name: Creating ipsec conf file
-  ansible.builtin.template:
-    src: ipsec.conf.j2
-    dest: /etc/ipsec.conf
-    mode: 0644
-
-- name: Creating ipsec secrets file
-  ansible.builtin.template:
-    src: ipsec.secrets.j2
-    dest: /etc/ipsec.secrets
-
-- name: Copy strongswan-starter.service
-  ansible.builtin.copy:
-    src: strongswan-starter.service
-    dest: /usr/lib/systemd/system/strongswan-starter.service
-    owner: root
-    group: root
-    mode: 0755
-
+- ansible.builtin.include_tasks: setup.yml
 - ansible.builtin.include_tasks: letsencrypt.yml
 
 - name: Restart strongSwan
